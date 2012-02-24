@@ -1,64 +1,138 @@
-/*
- * encoding.h
- *
- *  Created on: 2010/12/24
- *      Author: Odashi
- */
+// encoding.h
 
-#ifndef ENCODING_H_
-#define ENCODING_H_
+#ifndef INCLUDED_ENCODING_H_
+#define INCLUDED_ENCODING_H_
 
 #include <wchar.h>
 
-/*
- * enum ENCODING_TYPE
- * Encoding type
- */
-enum ENCODING_TYPE
-{
-	ENCODING_NONE = 0,
-	ENCODING_UTF16,
-	ENCODING_UTF8,
-	ENCODING_SHIFTJIS,
-	ENCODING_EUCJP
-};
+namespace Encoding {
 
-/*
- * enum UNICODE_SYMBOL
- * Unicode registered symbols
- */
-enum UNICODE_SYMBOL
-{
-	UNICODE_BAD_SEQUENCE = 0xfffd
-};
+	/** Encoding type
+	 */
+	enum ENCODING_TYPE {
+		/// Unknown encoding
+		NONE = 0,
+		/// UTF-16 LE/BE encoding
+		UTF16,
+		/// UTF-8 encoding
+		UTF8,
+		/// Shift JIS/CP932 encoding
+		SHIFTJIS,
+		/// EUC-JP encoding
+		EUCJP
+	};
 
-/*
- * void encoding_decode()
- * Transform a specified encoding into UTF-16.
- *
- * Return:
- *   The length of the text which is actually encoded.
- *   (with invalid code(0xfffd), without L'\0')
- *   If 'dest' is NULL, this function only counts the necessary size of 'dest.'
- */
-size_t encoding_decode(
-		wchar_t *dest,              // output UTF-16 encoded text or NULL
-		size_t dest_size,           // maximum length of 'dest' (without L'\0')
-		const unsigned char *src,   // input text which is encoded by such specified encoding
-		size_t src_size,            // maximum length of 'src' (without '\0')
-		enum ENCODING_TYPE encoding // encoding of 'src'
-);
+	/** Unicode registered symbols
+	 */
+	enum UNICODE_SYMBOL {
+		/// Unrecognized character (Geta character)
+		UNICODE_BAD_SEQUENCE = 0xfffd
+	};
 
-/*
- * enum ENCODING_TYPE encoding_getEncoding()
- * Guess the encoding type of text data.
- *
- * Return:
- *   An ENCODING_TYPE value which is guessed from 'src.'
- */
-enum ENCODING_TYPE encoding_getEncoding(
-		const unsigned char *src, // input text
-		size_t src_size           // maximum length of 'src' (without '\0')
-);
+	/** Transform UTF-16 BE/LE byte stream into UTF-16 characters.
+	 *
+	 * @param dest Destination pointer for UTF-16 encoded text or NULL.
+	 * @param dest_size Maximum length of dest (without L'\0').
+	 * @param src Source text encoded UTF-16 LE/BE.
+	 * @param src_size Maximum length of src (without L'\0').
+	 * 
+	 * @retval The length of the text which is actually encoded.
+	 * (with invalid code (0xfffd), without L'\0')
+	 * If dest is NULL, this function only counts the necessary size of dest.
+	 */
+	unsigned int decode_utf16(
+		wchar_t *dest,
+		unsigned int dest_size,
+		const unsigned char *src,
+		unsigned int src_size
+	);
 
-#endif /* ENCODING_H_ */
+	/** Transform UTF-8 byte stream into UTF-16 characters.
+	 *
+	 * @param dest Destination pointer for UTF-16 encoded text or NULL.
+	 * @param dest_size Maximum length of dest (without L'\0').
+	 * @param src Source text encoded UTF-8.
+	 * @param src_size Maximum length of src (without L'\0').
+	 * 
+	 * @retval The length of the text which is actually encoded.
+	 * (with invalid code (0xfffd), without L'\0')
+	 * If dest is NULL, this function only counts the necessary size of dest.
+	 */
+	unsigned int decode_utf8(
+		wchar_t *dest,
+		unsigned int dest_size,
+		const unsigned char *src,
+		unsigned int src_size
+	);
+
+	/** Transform Shift JIS/CP932 byte stream into UTF-16 characters.
+	 *
+	 * @param dest Destination pointer for UTF-16 encoded text or NULL.
+	 * @param dest_size Maximum length of dest (without L'\0').
+	 * @param src Source text encoded Shift JIS.
+	 * @param src_size Maximum length of src (without L'\0').
+	 * 
+	 * @retval The length of the text which is actually encoded.
+	 * (with invalid code (0xfffd), without L'\0')
+	 * If dest is NULL, this function only counts the necessary size of dest.
+	 */
+	unsigned int decode_shiftjis(
+		wchar_t *dest,
+		unsigned int dest_size,
+		const unsigned char *src,
+		unsigned int src_size
+	);
+
+	/** Transform EUC-JP byte stream into UTF-16 characters.
+	 *
+	 * @param dest Destination pointer for UTF-16 encoded text or NULL.
+	 * @param dest_size Maximum length of dest (without L'\0').
+	 * @param src Source text encoded EUC-JP.
+	 * @param src_size Maximum length of src (without L'\0').
+	 * 
+	 * @retval The length of the text which is actually encoded.
+	 * (with invalid code (0xfffd), without L'\0')
+	 * If dest is NULL, this function only counts the necessary size of dest.
+	 */
+	unsigned int decode_eucjp(
+		wchar_t *dest,
+		unsigned int dest_size,
+		const unsigned char *src,
+		unsigned int src_size
+	);
+
+	/** Transform a specified encoding into UTF-16.
+	 *
+	 * @param dest Destination pointer for UTF-16 encoded text or NULL.
+	 * @param dest_size Maximum length of dest (without L'\0').
+	 * @param src Source text.
+	 * @param src_size Maximum length of src (without L'\0').
+	 * @param encoding Encoding of src.
+	 * 
+	 * @retval The length of the text which is actually encoded.
+	 * (with invalid code (0xfffd), without L'\0')
+	 * If dest is NULL, this function only counts the necessary size of dest.
+	 */
+	unsigned int decode(
+			wchar_t *dest,
+			unsigned int dest_size,
+			const unsigned char *src,
+			unsigned int src_size,
+			enum ENCODING_TYPE encoding
+	);
+
+	/** Guess the encoding type of text data.
+	 *
+	 * @param src Source text.
+	 * @param src_size Maximum length of src (without '\0').
+	 * 
+	 * @retval An ENCODING_TYPE value which is guessed from src.
+	 */
+	 ENCODING_TYPE getEncoding(
+			const unsigned char *src,
+			unsigned int src_size
+	);
+
+} // namespace Encoding
+
+#endif // INCLUDED_ENCODING_H_

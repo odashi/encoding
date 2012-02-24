@@ -1,83 +1,53 @@
-/*
- * encoding.c
- *
- *  Created on: 2010/12/24
- *      Author: Odashi
- */
+// encoding.cpp
 #include "encoding.h"
-
 #include "jis2unicode.h"
 
-static size_t encoding_decode_utf16(wchar_t *, size_t, const unsigned char *, size_t);
-static size_t encoding_decode_utf8(wchar_t *, size_t, const unsigned char *, size_t);
-static size_t encoding_decode_shiftjis(wchar_t *, size_t, const unsigned char *, size_t);
-static size_t encoding_decode_eucjp(wchar_t *, size_t,const unsigned char *, size_t);
-
-/*
- * size_t encoding_decode()
- * Created on: 2010/12/29
- * Updated on: 2010/12/29
- *     Author: Odashi
- */
-size_t encoding_decode(
+unsigned int Encoding::decode(
 		wchar_t *dest,
-		size_t dest_size,
+		unsigned int dest_size,
 		const unsigned char *src,
-		size_t src_size,
+		unsigned int src_size,
 		enum ENCODING_TYPE encoding)
 {
-	switch (encoding)
-	{
-	case ENCODING_UTF16:    return encoding_decode_utf16(dest, dest_size, src, src_size);
-	case ENCODING_UTF8:     return encoding_decode_utf8(dest, dest_size, src, src_size);
-	case ENCODING_SHIFTJIS: return encoding_decode_shiftjis(dest, dest_size, src, src_size);
-	case ENCODING_EUCJP:    return encoding_decode_eucjp(dest, dest_size, src, src_size);
-	default: return 0;
+	// dispatching
+	switch (encoding) {
+	case UTF16: return decode_utf16(dest, dest_size, src, src_size);
+	case UTF8: return decode_utf8(dest, dest_size, src, src_size);
+	case SHIFTJIS: return decode_shiftjis(dest, dest_size, src, src_size);
+	case EUCJP: return decode_eucjp(dest, dest_size, src, src_size);
 	}
 
-	// never arrive at here.
+	// unknown encoding.
 	return 0;
 }
 
-/*
- * size_t encoding_decode_utf16()
- * Created on: 2010/12/29
- * Updated on: 2010/12/30
- *     Author: Odashi
- */
-static size_t encoding_decode_utf16(
+unsigned int Encoding::decode_utf16(
 		wchar_t *dest,
-		size_t dest_size,
+		unsigned int dest_size,
 		const unsigned char *src,
-		size_t src_size)
+		unsigned int src_size)
 {
 	int high = 1, low = 0; // for endian
 	unsigned char b1, b2;
-	size_t len = 0;
-	int i;
+	unsigned int len = 0;
 
 	if (src_size < 2)
 		return 0;
 
 	// recognize BOM
 	b1 = src[0], b2 = src[1];
-	if (b1 == 0xff && b2 == 0xfe)
-	{
+	if (b1 == 0xff && b2 == 0xfe) {
 		// little endian
 		src += 2, src_size -= 2;
-	}
-	else if (b1 == 0xfe && b2 == 0xff)
-	{
+	} else if (b1 == 0xfe && b2 == 0xff) {
 		// big endian
 		src += 2, src_size -= 2;
 		high = 0, low = 1;
 	}
 
-	if (!dest)
-	{
+	if (!dest) {
 		// counting
-		for (i = 0; i < src_size - 1; i += 2, len++)
-		{
+		for (unsigned int i = 0; i < src_size - 1; i += 2, len++) {
 			b1 = src[i], b2 = src[i + 1];
 			if (b1 == 0x00 && b2 == 0x00)
 				break; // end of text
@@ -86,8 +56,7 @@ static size_t encoding_decode_utf16(
 	}
 
 	// decoding
-	for (i = 0; i < src_size - 1 && len < dest_size; i += 2, len++)
-	{
+	for (unsigned int i = 0; i < src_size - 1 && len < dest_size; i += 2, len++) {
 		b1 = src[i + high], b2 = src[i + low];
 		if (b1 == 0x00 && b2 == 0x00)
 			break; // end of text
@@ -96,32 +65,23 @@ static size_t encoding_decode_utf16(
 	return len;
 }
 
-/*
- * size_t encoding_decode_utf8()
- * Created on: 2010/12/29
- * Updated on: 2010/12/31
- *     Author: Odashi
- */
-static size_t encoding_decode_utf8(
+static unsigned int Encoding::decode_utf8(
 		wchar_t *dest,
-		size_t dest_size,
+		unsigned int dest_size,
 		const unsigned char *src,
-		size_t src_size)
+		unsigned int src_size)
 {
 	unsigned char b1, b2, b3;
-	size_t len = 0;
-	int i;
+	unsigned int len = 0;
 
 	// recognize BOM
 	if (src_size > 3)
 		if (src[0] == 0xef && src[1] == 0xbb && src[2] == 0xbf)
 			src += 3, src_size -= 3;
 
-	if (!dest)
-	{
+	if (!dest) {
 		// counting
-		for (i = 0; i < src_size; i++, len++)
-		{
+		for (unsigned int i = 0; i < src_size; i++, len++) {
 			b1 = src[i];
 			// end of text
 			if (b1 == 0x00)
@@ -132,8 +92,7 @@ static size_t encoding_decode_utf8(
 			if (b1 <= 0xc1 || 0xf0 <= b1)
 				continue;
 			// 2 bytes sequence
-			if (b1 <= 0xdf)
-			{
+			if (b1 <= 0xdf) {
 				if (++i >= src_size)
 					break;
 				b2 = src[i];
@@ -144,8 +103,7 @@ static size_t encoding_decode_utf8(
 				i--;
 			}
 			// 3 bytes sequence
-			else // b1 <= 0xef
-			{
+			else /* b1 <= 0xef */ {
 				if ((i += 2) >= src_size)
 					break;
 				b2 = src[i - 1], b3 = src[i];
@@ -160,8 +118,7 @@ static size_t encoding_decode_utf8(
 	}
 
 	// decoding
-	for (i = 0; i < src_size && len < dest_size; i++, len++)
-	{
+	for (unsigned int i = 0; i < src_size && len < dest_size; i++, len++) {
 		b1 = src[i];
 		// end of text
 		if (b1 == 0x00)
@@ -174,8 +131,7 @@ static size_t encoding_decode_utf8(
 		else if (b1 <= 0xc1 || 0xf0 <= b1)
 			dest[len] = UNICODE_BAD_SEQUENCE;
 		// 2 bytes sequence
-		else if (b1 <= 0xdf)
-		{
+		else if (b1 <= 0xdf) {
 			if (++i >= src_size)
 				break;
 			b2 = src[i];
@@ -189,8 +145,7 @@ static size_t encoding_decode_utf8(
 				i--;
 		}
 		// 3 bytes sequence
-		else // b1 <= 0xef
-		{
+		else /* b1 <= 0xef */ {
 			if ((i += 2) >= src_size)
 				break;
 			b2 = src[i - 1], b3 = src[i];
@@ -208,17 +163,11 @@ static size_t encoding_decode_utf8(
 	return len;
 }
 
-/*
- * size_t encoding_decode_shiftjis()
- * Created on: 2010/12/29
- * Updated on: 2010/12/30
- *     Author: Odashi
- */
-static size_t encoding_decode_shiftjis(
+static unsigned int Encoding::decode_shiftjis(
 		wchar_t *dest,
-		size_t dest_size,
+		unsigned int dest_size,
 		const unsigned char *src,
-		size_t src_size)
+		unsigned int src_size)
 {
 	const int offset[] = {
 		  -1,    0,  188,  376,  564,  752,  940, 1128,
@@ -241,18 +190,14 @@ static size_t encoding_decode_shiftjis(
 
 	unsigned char b1, b2;
 	int codepoint;
-	size_t len = 0;
-	int i;
+	unsigned int len = 0;
 
-	if (!dest)
-	{
+	if (!dest) {
 		// counting
-		for (i = 0; i < src_size; i++, len++)
-		{
+		for (unsigned int i = 0; i < src_size; i++, len++) {
 			b1  = src[i];
-			// 2 byte sequence
-			if (jisx0201_2_unicode[b1] == UNICODE_BAD_SEQUENCE)
-			{
+			// 2 bytes sequence
+			if (jisx0201_2_unicode[b1] == UNICODE_BAD_SEQUENCE) {
 				if (++i >= src_size)
 					break;
 				b2 = src[i];
@@ -267,21 +212,18 @@ static size_t encoding_decode_shiftjis(
 	}
 
 	// decoding
-	for (i = 0; i < src_size && len < dest_size; i++, len++)
-	{
+	for (unsigned int i = 0; i < src_size && len < dest_size; i++, len++) {
 		b1  = src[i];
 		// 1 byte sequence (ASCII & JIS X 0201)
 		if (jisx0201_2_unicode[b1] != UNICODE_BAD_SEQUENCE)
 			dest[len] = jisx0201_2_unicode[b1];
-		// 2 byte sequence (JIS X 0208)
-		else
-		{
+		// 2 bytes sequence (JIS X 0208)
+		else {
 			if (++i >= src_size)
 				break;
 			b2 = src[i];
 			// correct sequence
-			if (offset[b1 - 0x80] != -1 && b2 != 0x7f && 0x40 <= b2 && b2 <= 0xfc)
-			{
+			if (offset[b1 - 0x80] != -1 && b2 != 0x7f && 0x40 <= b2 && b2 <= 0xfc) {
 				codepoint = offset[b1 - 0x80] + (b2 < 0x80 ? b2 : b2 - 1) - 0x40;
 				dest[len] = jisx0208_2_unicode[codepoint];
 			}
@@ -296,31 +238,21 @@ static size_t encoding_decode_shiftjis(
 	return len;
 }
 
-/*
- * size_t encoding_decode_eucjp()
- * Created on: 2010/12/29
- * Updated on: 2010/12/31
- *     Author: Odashi
- */
-static size_t encoding_decode_eucjp(
+static unsigned int Encoding::decode_eucjp(
 		wchar_t *dest,
-		size_t dest_size,
+		unsigned int dest_size,
 		const unsigned char *src,
-		size_t src_size)
+		unsigned int src_size)
 {
 	unsigned char b1, b2;
-	size_t len = 0;
-	int i;
+	unsigned int len = 0;
 
-	if (!dest)
-	{
+	if (!dest) {
 		// counting
-		for (i = 0; i < src_size; i++, len++)
-		{
+		for (unsigned int i = 0; i < src_size; i++, len++) {
 			b1 = src[i];
 			// 2 bytes sequence
-			if (b1 >= 0x80)
-			{
+			if (b1 >= 0x80) {
 				if (++i >= src_size)
 					break;
 				b2 = src[i];
@@ -336,15 +268,13 @@ static size_t encoding_decode_eucjp(
 	}
 
 	// decoding
-	for (i = 0; i < src_size && len < dest_size; i++, len++)
-	{
+	for (unsigned int i = 0; i < src_size && len < dest_size; i++, len++) {
 		b1 = src[i];
 		// 1 byte sequence
 		if (b1 <= 0x7f)
 			dest[len] = (wchar_t)b1;
 		// 2 bytes sequence
-		else // b1 >= 0x80
-		{
+		else /* b1 >= 0x80 */ {
 			if (++i >= src_size)
 				break;
 			b2 = src[i];
@@ -355,8 +285,7 @@ static size_t encoding_decode_eucjp(
 			else if (0xa1 <= b1 && b1 <= 0xf4 && 0xa1 <= b2 && b2 <= 0xfe)
 				dest[len] = jisx0208_2_unicode[(b1 - 0xa1) * 94 + (b2 - 0xa1)];
 			// bad sequence
-			else
-			{
+			else {
 				dest[len] = UNICODE_BAD_SEQUENCE;
 				i--;
 			}
@@ -365,38 +294,27 @@ static size_t encoding_decode_eucjp(
 	return len;
 }
 
-/*
- * enum ENCODING_TYPE encoding_getEncoding()
- * Created on: 2010/12/31
- * Updated on: 2011/01/01
- *     Author: Odashi
- *
- * Basic idea:
- *   UTF-16
- *     Find UTF-16 encoded ASCII.
- *   UTF-8, Shift_JIS, EUC_JP
- *     Calculate the "similarity value" and choose the largest one.
- */
-enum ENCODING_TYPE encoding_getEncoding(
+enum Encoding::ENCODING_TYPE Encoding::getEncoding(
 		const unsigned char *src,
-		size_t src_size)
+		unsigned int src_size)
 {
+	/* Basic idea:
+	 *   UTF-16
+	 *     Find UTF-16 encoded ASCII.
+	 *   UTF-8, Shift_JIS, EUC_JP
+	 *     Calculate the "similarity value" and choose the largest one.
+	 */
 	int utf8 = 0, sjis = 0, eucjp = 0;
 	unsigned char b1, b2, b3;
-	int i;
 	int utf16_high = 1, utf16_low = 0; // for UTF-16 endian
 
 	// check UTF-16 BOM
-	if (src_size >= 2)
-	{
+	if (src_size >= 2) {
 		b1 = src[0], b2 = src[1];
-		if (b1 == 0xff && b2 == 0xfe)
-		{
+		if (b1 == 0xff && b2 == 0xfe) {
 			// little endian
 			src += 2, src_size -= 2;
-		}
-		else if (b1 == 0xfe && b2 == 0xff)
-		{
+		} else if (b1 == 0xfe && b2 == 0xff) {
 			// big endian
 			src += 2, src_size -= 2;
 			utf16_high = 0, utf16_low = 1;
@@ -404,30 +322,26 @@ enum ENCODING_TYPE encoding_getEncoding(
 	}
 
 	// find UTF-16 encoded ASCII
-	for (i = 0; i < src_size - 1; i += 2)
-	{
+	for (unsigned int i = 0; i < src_size - 1; i += 2) {
 		b1 = src[i + utf16_high], b2 = src[i + utf16_low];
 		if (b1 == 0x00 && b2 != 0x00 && b2 != 0x7f)
-				return ENCODING_UTF16;
+				return UTF16;
 	}
 
 	// calculate UTF-8 similarity
-	for (i = 0; i < src_size; i++)
-	{
+	for (unsigned int i = 0; i < src_size; i++) {
 		b1 = src[i];
 		// 1 byte sequence
 		if (b1 <= 0x7f)
 			utf8++;
 		// 2 bytes sequence
-		else if (0xc2 <= b1 && b1 <= 0xdf && i < src_size - 1)
-		{
+		else if (0xc2 <= b1 && b1 <= 0xdf && i < src_size - 1) {
 			b2 = src[i + 1];
 			if (0x80 <= b2 && b2 <= 0xbf)
 				utf8 += 2, i++;
 		}
 		// 3 bytes sequence
-		else if (0xe0 <= b1 && b1 <= 0xef && i < src_size - 2)
-		{
+		else if (0xe0 <= b1 && b1 <= 0xef && i < src_size - 2) {
 			b2 = src[i + 1], b3 = src[i + 2];
 			if (0x80 <= b2 && b2 <= 0xbf && 0x80 <= b3 && b3 <= 0xbf)
 				utf8 += 3, i += 2;
@@ -435,15 +349,13 @@ enum ENCODING_TYPE encoding_getEncoding(
 	}
 
 	// calculate Shift_JIS similarity
-	for (i = 0; i < src_size; i++)
-	{
+	for (unsigned int i = 0; i < src_size; i++) {
 		b1 = src[i];
 		// 1 byte sequence
 		if (b1 <= 0x7f || (0xa1 <= b1 && b1 <= 0xdf))
 			sjis++;
 		// 2 byte sequence
-		else if (((0x81 <= b1 && b1 <= 0x9f) || (0xe0 <= b1 && b1 <= 0xe9)) && i < src_size - 1)
-		{
+		else if (((0x81 <= b1 && b1 <= 0x9f) || (0xe0 <= b1 && b1 <= 0xe9)) && i < src_size - 1) {
 			b2 = src[i + 1];
 			if (b2 != 0x7f && 0x40 <= b2 && b2 <= 0xfc)
 				sjis += 2, i++;
@@ -451,15 +363,13 @@ enum ENCODING_TYPE encoding_getEncoding(
 	}
 
 	// calculate EUC_JP similarity
-	for (i = 0; i < src_size; i++)
-	{
+	for (unsigned int i = 0; i < src_size; i++) {
 		b1 = src[i];
 		// 1 byte sequence
 		if (b1 <= 0x7f)
 			eucjp++;
 		// 2 byte sequence
-		else if (i < src_size - 1)
-		{
+		else if (i < src_size - 1) {
 			b2 = src[i + 1];
 			// single shift
 			// JIS X 0208
@@ -469,9 +379,9 @@ enum ENCODING_TYPE encoding_getEncoding(
 	}
 
 	if (utf8 >= sjis && utf8 >= eucjp)
-		return ENCODING_UTF8;
+		return UTF8;
 	if (sjis >= eucjp)
-		return ENCODING_SHIFTJIS;
+		return SHIFTJIS;
 
-	return ENCODING_EUCJP;
+	return EUCJP;
 }
