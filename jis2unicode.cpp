@@ -43,6 +43,13 @@ const int Encoding::jisx0201_2_unicode[] = {
 
 // JIS X 0213 to Unicode
 const int Encoding::jisx0213_2_unicode[] = {
+	/* This table is converted by "JIS X 0213:2004 8-bit code vs Unicode mapping table" from x0213.org.
+	 * License:
+	 * 	Copyright (C) 2001 earthian@tama.or.jp, All Rights Reserved.
+	 * 	Copyright (C) 2001 I'O, All Rights Reserved.
+	 * 	Copyright (C) 2009 Project X0213, All Rights Reserved.
+	 * 	You can use, modify, distribute this table freely.
+	 */
 	// plane 1 row 1
 	0x003000, 0x003001, 0x003002, 0x00002c, 0x00002e, 0x0030fb, 0x00003a, 0x00003b,
 	0x00003f, 0x000021, 0x00309b, 0x00309c, 0x0000b4, 0x000060, 0x0000a8, 0x00005e,
