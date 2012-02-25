@@ -57,7 +57,7 @@ unsigned int Encoding::decode_utf16(int *dest, unsigned int dest_size, const uns
 
 unsigned int Encoding::decode_utf8(int *dest, unsigned int dest_size, const unsigned char *src, unsigned int src_size)
 {
-	unsigned char b1, b2, b3, b4;
+	unsigned char b1, b2;
 	unsigned int len = 0;
 
 	// recognize BOM
@@ -71,36 +71,24 @@ unsigned int Encoding::decode_utf8(int *dest, unsigned int dest_size, const unsi
 			b1 = src[i];
 			// end of text
 			if (b1 == 0x00) break;
-			// 1 byte sequence (ASCII compatible)
-			// 5~6 bytes sequence (error)
-			// other errors
-			if (b1 <= 0xc1 || 0xf8 <= b1) continue;
-			// 2 bytes sequence
-			if (b1 <= 0xdf) {
-				if (++i >= src_size) break;
-				b2 = src[i];
-				// correct sequence
-				if (0x80 <= b2 && b2 <= 0xbf) continue;
-				// bad sequence
-				i--;
-			}
-			// 3 bytes sequence
-			else if (b1 <= 0xef) {
-				if ((i += 2) >= src_size) break;
-				b2 = src[i - 1], b3 = src[i];
-				// correct sequence
-				if (0x80 <= b2 && b2 <= 0xbf && 0x80 <= b3 && b3 <= 0xbf) continue;
-				// bad sequence
-				i -= 2;
-			}
-			// 4 bytes sequence
-			else /* if (b1 <= 0xf7) */ {
-				if ((i += 3) >= src_size) break;
-				b2 = src[i - 2], b3 = src[i - 1], b4 = src[i];
-				// correct sequence
-				if (0x80 <= b2 && b2 <= 0xbf && 0x80 <= b3 && b3 <= 0xbf && 0x80 <= b4 && b4 <= 0xbf) continue;
-				// bad sequence
-				i -= 3;
+			// 1 byte sequence (ASCII compatible)/other errors
+			if (b1 < 0xc2 || 0xfd < b1) continue;
+			// 2~6 bytes sequence
+			unsigned char sup = 0xdf;
+			for (int bytes = 2; bytes <= 6; ++bytes) {
+				if (b1 <= sup && i <= src_size - bytes) {
+					bool p = true;
+					for (int n = 1; n < bytes; ++n) {
+						b2 = src[i + n];
+						if (b2 < 0x80 || 0xbf < b2) {
+							p = false;
+							break;
+						}
+					}
+					if (p) i += bytes - 1;
+					break;
+				}
+				sup = (sup >> 1) | 0x80;
 			}
 		}
 		return len;
@@ -112,51 +100,35 @@ unsigned int Encoding::decode_utf8(int *dest, unsigned int dest_size, const unsi
 		// end of text
 		if (b1 == 0x00) break;
 		// 1 byte sequence (ASCII compatible)
-		if (b1 <= 0x7f) dest[len] = (int)b1;
-		// 5~6 bytes sequence (error)
+		if (b1 <= 0x7f) {
+			dest[len] = (int)b1;
+			continue;
+		}
 		// other errors
-		else if (b1 <= 0xc1 || 0xf8 <= b1) dest[len] = UNICODE_BAD_SEQUENCE;
-		// 2 bytes sequence
-		else if (b1 <= 0xdf) {
-			if (++i >= src_size) break;
-			b2 = src[i];
-			// correct sequence
-			if (0x80 <= b2 && b2 <= 0xbf) {
-				dest[len] =
-					(((int)b1 & 0x1f) << 6) |
-					((int)b2 & 0x3f);
-			}
-			// bad sequence
-			else i--;
+		else if (b1 < 0xc2 || 0xfd < b1) {
+			dest[len] = UNICODE_BAD_SEQUENCE;
+			continue;
 		}
-		// 3 bytes sequence
-		else if (b1 <= 0xef) {
-			if ((i += 2) >= src_size) break;
-			b2 = src[i - 1], b3 = src[i];
-			// correct sequence
-			if (0x80 <= b2 && b2 <= 0xbf && 0x80 <= b3 && b3 <= 0xbf) {
-				dest[len] =
-					(((int)b1 & 0x0f) << 12) |
-					(((int)b2 & 0x3f) << 6) |
-					((int)b3 & 0x3f);
+		// 2~6 bytes sequence
+		unsigned char sup = 0xdf, mask = 0x1f;
+		for (int bytes = 2; bytes <= 6; ++bytes) {
+			if (b1 <= sup && i <= src_size - bytes) {
+				dest[len] = b1 & mask;
+				bool p = true;
+				for (int n = 1; n < bytes; ++n) {
+					b2 = src[i + n];
+					if (b2 < 0x80 || 0xbf < b2) {
+						dest[len] = UNICODE_BAD_SEQUENCE;
+						p = false;
+						break;
+					}
+					dest[len] = dest[len] << 6 | (b2 & 0x3f);
+				}
+				if (p) i += bytes - 1;
+				break;
 			}
-			// bad sequence
-			else i -= 2;
-		}
-		// 4 bytes sequence
-		else /* if (b1 <= 0xf7) */ {
-			if ((i += 3) >= src_size) break;
-			b2 = src[i - 2], b3 = src[i - 1], b4 = src[i];
-			// correct sequence
-			if (0x80 <= b2 && b2 <= 0xbf && 0x80 <= b3 && b3 <= 0xbf && 0x80 <= b4 && b4 <= 0xbf) {
-				dest[len] =
-					(((int)b1 & 0x07) << 18) |
-					(((int)b2 & 0x3f) << 12) |
-					(((int)b3 & 0x3f) << 6) |
-					((int)b4 & 0x3f);
-			}
-			// bad sequence
-			else i -= 3;
+			sup = (sup >> 1) | 0x80;
+			mask >>= 1;
 		}
 	}
 	return len;
@@ -318,7 +290,7 @@ Encoding::EncodingType Encoding::getEncoding(const unsigned char *src, unsigned 
 	 *     Calculate the "similarity value" and choose the largest one.
 	 */
 	int utf8 = 0, sjis = 0, eucjp = 0;
-	unsigned char b1, b2, b3, b4;
+	unsigned char b1, b2, b3;
 	int utf16_high = 1, utf16_low = 0; // for UTF-16 endian
 
 	// check UTF-16 BOM
@@ -344,21 +316,28 @@ Encoding::EncodingType Encoding::getEncoding(const unsigned char *src, unsigned 
 	for (unsigned int i = 0; i < src_size; i++) {
 		b1 = src[i];
 		// 1 byte sequence
-		if (b1 <= 0x7f) utf8++;
-		// 2 bytes sequence
-		else if (0xc2 <= b1 && b1 <= 0xdf && i < src_size - 1) {
-			b2 = src[i + 1];
-			if (0x80 <= b2 && b2 <= 0xbf) utf8 += 2, i++;
+		if (b1 <= 0x7f) {
+			utf8++;
+			continue;
 		}
-		// 3 bytes sequence
-		else if (0xe0 <= b1 && b1 <= 0xef && i < src_size - 2) {
-			b2 = src[i + 1], b3 = src[i + 2];
-			if (0x80 <= b2 && b2 <= 0xbf && 0x80 <= b3 && b3 <= 0xbf) utf8 += 3, i += 2;
-		}
-		// 4 bytes sequence
-		else if (0xf0 <= b1 && b1 <= 0xf7 && i < src_size - 3) {
-			b2 = src[i + 1], b3 = src[i + 2], b4 = src[i + 3];
-			if (0x80 <= b2 && b2 <= 0xbf && 0x80 <= b3 && b3 <= 0xbf && 0x80 <= b4 && b4 <= 0xbf) utf8 += 4, i += 3;
+		// other errors
+		if (b1 < 0xc2 || 0xfd < b1) continue;
+		// 2~6 bytes sequence
+		unsigned char sup = 0xdf;
+		for (int bytes = 2; bytes <= 6; ++bytes) {
+			if (b1 <= sup && i <= src_size - bytes) {
+				bool p = true;
+				for (int n = 1; n < bytes; ++n) {
+					b2 = src[i + n];
+					if (b2 < 0x80 || 0xbf < b2) {
+						p = false;
+						break;
+					}
+				}
+				if (p) utf8 += bytes, i += bytes - 1;
+				break;
+			}
+			sup = (sup >> 1) | 0x80;
 		}
 	}
 
