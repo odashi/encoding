@@ -349,7 +349,7 @@ unsigned int Encoding::decode_eucjp(
 	return len;
 }
 
-enum Encoding::EncodingType Encoding::getEncoding(
+Encoding::EncodingType Encoding::getEncoding(
 		const unsigned char *src,
 		unsigned int src_size)
 {
