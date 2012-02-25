@@ -312,7 +312,7 @@ enum Encoding::EncodingType Encoding::getEncoding(
 	 *     Calculate the "similarity value" and choose the largest one.
 	 */
 	int utf8 = 0, sjis = 0, eucjp = 0;
-	unsigned char b1, b2, b3;
+	unsigned char b1, b2, b3, b4;
 	int utf16_high = 1, utf16_low = 0; // for UTF-16 endian
 
 	// check UTF-16 BOM
@@ -353,6 +353,12 @@ enum Encoding::EncodingType Encoding::getEncoding(
 			if (0x80 <= b2 && b2 <= 0xbf && 0x80 <= b3 && b3 <= 0xbf)
 				utf8 += 3, i += 2;
 		}
+		// 4 bytes sequence
+		else if (0xf0 <= b1 && b1 <= 0xf7 && i < src_size - 3) {
+			b2 = src[i + 1], b3 = src[i + 2], b4 = src[i + 3];
+			if (0x80 <= b2 && b2 <= 0xbf && 0x80 <= b3 && b3 <= 0xbf && 0x80 <= b4 && b4 <= 0xbf)
+				utf8 += 4, i += 3;
+		}
 	}
 
 	// calculate Shift_JIS similarity
@@ -361,7 +367,7 @@ enum Encoding::EncodingType Encoding::getEncoding(
 		// 1 byte sequence
 		if (b1 <= 0x7f || (0xa1 <= b1 && b1 <= 0xdf))
 			sjis++;
-		// 2 byte sequence
+		// 2 bytes sequence
 		else if (((0x81 <= b1 && b1 <= 0x9f) || (0xe0 <= b1 && b1 <= 0xfc)) && i < src_size - 1) {
 			b2 = src[i + 1];
 			if (b2 != 0x7f && 0x40 <= b2 && b2 <= 0xfc)
@@ -375,13 +381,13 @@ enum Encoding::EncodingType Encoding::getEncoding(
 		// 1 byte sequence
 		if (b1 <= 0x7f)
 			eucjp++;
-		// 3 byte sequence (JIS X 0213 plane 2)
+		// 3 bytes sequence (JIS X 0213 plane 2)
 		else if (b1 == 0x8f && i < src_size - 2) {
 			b2 = src[i + 1], b3 = src[i + 2];
 			if (0xa1 <= b2 && b2 <= 0xfe && 0xa1 <= b3 && b3 <= 0xfe)
 				eucjp += 3, i += 2;
 		}
-		// 2 byte sequence
+		// 2 bytes sequence
 		else if (i < src_size - 1) {
 			b2 = src[i + 1];
 			// JIS X 0201 kana/JIS X 0213 plane 1
