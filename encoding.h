@@ -7,7 +7,7 @@ namespace Encoding {
 
 	/** Encoding type
 	 */
-	enum ENCODING_TYPE {
+	enum EncodingType {
 		/// Unknown encoding
 		NONE = 0,
 		/// UTF-16 LE/BE encoding
@@ -124,9 +124,9 @@ namespace Encoding {
 	 * @param src Source text.
 	 * @param src_size Maximum length of src (without '\0').
 	 * 
-	 * @retval An ENCODING_TYPE value which is guessed from src.
+	 * @retval An EncodingType value which is guessed from src.
 	 */
-	 ENCODING_TYPE getEncoding(
+	 EncodingType getEncoding(
 			const unsigned char *src,
 			unsigned int src_size
 	);

@@ -301,7 +301,7 @@ static unsigned int Encoding::decode_eucjp(
 	return len;
 }
 
-enum Encoding::ENCODING_TYPE Encoding::getEncoding(
+enum Encoding::EncodingType Encoding::getEncoding(
 		const unsigned char *src,
 		unsigned int src_size)
 {
@@ -375,12 +375,17 @@ enum Encoding::ENCODING_TYPE Encoding::getEncoding(
 		// 1 byte sequence
 		if (b1 <= 0x7f)
 			eucjp++;
+		// 3 byte sequence (JIS X 0213 plane 2)
+		else if (b1 == 0x8f && i < src_size - 2) {
+			b2 = src[i + 1], b3 = src[i + 2];
+			if (0xa1 <= b2 && b2 <= 0xfe && 0xa1 <= b3 && b3 <= 0xfe)
+				eucjp += 3, i += 2;
+		}
 		// 2 byte sequence
 		else if (i < src_size - 1) {
 			b2 = src[i + 1];
-			// single shift
-			// JIS X 0208
-			if (b1 == 0x8e || (0xa1 <= b1 && b1 <= 0xf4 && 0xa1 <= b2 && b2 <= 0xfe))
+			// JIS X 0201 kana/JIS X 0213 plane 1
+			if (b1 == 0x8e || (0xa1 <= b1 && b1 <= 0xfe && 0xa1 <= b2 && b2 <= 0xfe))
 				eucjp += 2, i++;
 		}
 	}
