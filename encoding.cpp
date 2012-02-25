@@ -48,9 +48,10 @@ unsigned int Encoding::decode_utf16(
 	if (!dest) {
 		// counting
 		for (unsigned int i = 0; i < src_size - 1; i += 2, len++) {
-			b1 = src[i], b2 = src[i + 1];
+			b1 = src[i + high], b2 = src[i + low];
+			// end of text
 			if (b1 == 0x00 && b2 == 0x00)
-				break; // end of text
+				break;
 		}
 		return len;
 	}
@@ -58,8 +59,9 @@ unsigned int Encoding::decode_utf16(
 	// decoding
 	for (unsigned int i = 0; i < src_size - 1 && len < dest_size; i += 2, len++) {
 		b1 = src[i + high], b2 = src[i + low];
+		// end of text
 		if (b1 == 0x00 && b2 == 0x00)
-			break; // end of text
+			break;
 		dest[len] = ((int)b1 << 8) | (int)b2;
 	}
 	return len;
@@ -224,6 +226,9 @@ unsigned int Encoding::decode_shiftjis(
 		// counting
 		for (unsigned int i = 0; i < src_size; i++, len++) {
 			b1  = src[i];
+			// end of text
+			if (b1 == 0x00)
+				break;
 			// 2 bytes sequence
 			if (jisx0201_2_unicode[b1] == UNICODE_BAD_SEQUENCE) {
 				if (++i >= src_size)
@@ -242,6 +247,9 @@ unsigned int Encoding::decode_shiftjis(
 	// decoding
 	for (unsigned int i = 0; i < src_size && len < dest_size; i++, len++) {
 		b1  = src[i];
+		// end of text
+		if (b1 == 0x00)
+			break;
 		// 1 byte sequence (ASCII & JIS X 0201)
 		if (jisx0201_2_unicode[b1] != UNICODE_BAD_SEQUENCE)
 			dest[len] = jisx0201_2_unicode[b1];
@@ -285,6 +293,9 @@ unsigned int Encoding::decode_eucjp(
 		// counting
 		for (unsigned int i = 0; i < src_size; i++, len++) {
 			b1 = src[i];
+			// end of text
+			if (b1 == 0x00)
+				break;
 			// 3 bytes sequence (JIS X 0213 plane 2)
 			if (b1 == 0x8f) {
 				if ((i += 2) >= src_size)
@@ -312,6 +323,9 @@ unsigned int Encoding::decode_eucjp(
 	// decoding
 	for (unsigned int i = 0; i < src_size && len < dest_size; i++, len++) {
 		b1 = src[i];
+		// end of text
+		if (b1 == 0x00)
+			break;
 		// 1 byte sequence
 		if (b1 <= 0x7f)
 			dest[len] = (int)b1;
@@ -356,7 +370,7 @@ Encoding::EncodingType Encoding::getEncoding(
 	/* Basic idea:
 	 *   UTF-16
 	 *     Find UTF-16 encoded ASCII.
-	 *   UTF-8, Shift_JIS, EUC_JP
+	 *   UTF-8, Shift_JIS, EUC-JP
 	 *     Calculate the "similarity value" and choose the largest one.
 	 */
 	int utf8 = 0, sjis = 0, eucjp = 0;
@@ -423,7 +437,7 @@ Encoding::EncodingType Encoding::getEncoding(
 		}
 	}
 
-	// calculate EUC_JP similarity
+	// calculate EUC-JP similarity
 	for (unsigned int i = 0; i < src_size; i++) {
 		b1 = src[i];
 		// 1 byte sequence
