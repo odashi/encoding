@@ -22,7 +22,7 @@ namespace Encoding {
 
 	/** Unicode registered symbols
 	 */
-	enum UNICODE_SYMBOL {
+	enum UnicodeSymbol {
 		/// Unrecognized character (Geta character)
 		UNICODE_BAD_SEQUENCE = 0xfffd
 	};
