@@ -3,7 +3,7 @@
 #include "jis2unicode.h"
 
 unsigned int Encoding::decode(
-		wchar_t *dest,
+		int *dest,
 		unsigned int dest_size,
 		const unsigned char *src,
 		unsigned int src_size,
@@ -22,7 +22,7 @@ unsigned int Encoding::decode(
 }
 
 unsigned int Encoding::decode_utf16(
-		wchar_t *dest,
+		int *dest,
 		unsigned int dest_size,
 		const unsigned char *src,
 		unsigned int src_size)
@@ -60,13 +60,13 @@ unsigned int Encoding::decode_utf16(
 		b1 = src[i + high], b2 = src[i + low];
 		if (b1 == 0x00 && b2 == 0x00)
 			break; // end of text
-		dest[len] = ((wchar_t)b1 << 8) | (wchar_t)b2;
+		dest[len] = ((int)b1 << 8) | (int)b2;
 	}
 	return len;
 }
 
 static unsigned int Encoding::decode_utf8(
-		wchar_t *dest,
+		int *dest,
 		unsigned int dest_size,
 		const unsigned char *src,
 		unsigned int src_size)
@@ -125,7 +125,7 @@ static unsigned int Encoding::decode_utf8(
 			break;
 		// 1 byte sequence(ASCII compatible)
 		if (b1 <= 0x7f)
-			dest[len] = (wchar_t)b1;
+			dest[len] = (int)b1;
 		// 4~6 bytes sequence (error)
 		// other errors
 		else if (b1 <= 0xc1 || 0xf0 <= b1)
@@ -138,8 +138,8 @@ static unsigned int Encoding::decode_utf8(
 			// correct sequence
 			if (0x80 <= b2 && b2 <= 0xbf)
 				dest[len] =
-						(((wchar_t)b1 & 0x1f) << 6) |
-						((wchar_t)b2 & 0x3f);
+						(((int)b1 & 0x1f) << 6) |
+						((int)b2 & 0x3f);
 			// bad sequence
 			else
 				i--;
@@ -152,9 +152,9 @@ static unsigned int Encoding::decode_utf8(
 			// correct sequence
 			if (0x80 <= b2 && b2 <= 0xbf && 0x80 <= b3 && b3 <= 0xbf)
 				dest[len] =
-						(((wchar_t)b1 & 0x1f) << 12) |
-						(((wchar_t)b2 & 0x3f) << 6) |
-						((wchar_t)b3 & 0x3f);
+						(((int)b1 & 0x1f) << 12) |
+						(((int)b2 & 0x3f) << 6) |
+						((int)b3 & 0x3f);
 			// bad sequence
 			else
 				i -= 2;
@@ -164,28 +164,29 @@ static unsigned int Encoding::decode_utf8(
 }
 
 static unsigned int Encoding::decode_shiftjis(
-		wchar_t *dest,
+		int *dest,
 		unsigned int dest_size,
 		const unsigned char *src,
 		unsigned int src_size)
 {
+	const int KU_SIZE = 94;
 	const int offset[] = {
-		  -1,    0,  188,  376,  564,  752,  940, 1128,
-		1316, 1504, 1692, 1880, 2068, 2256, 2444, 2632,
-		2820, 3008, 3196, 3384, 3572, 3760, 3948, 4136,
-		4324, 4512, 4700, 4888, 5076, 5264, 5452, 5640,
-		  -1,   -1,   -1,   -1,   -1,   -1,   -1,   -1,
-		  -1,   -1,   -1,   -1,   -1,   -1,   -1,   -1,
-		  -1,   -1,   -1,   -1,   -1,   -1,   -1,   -1,
-		  -1,   -1,   -1,   -1,   -1,   -1,   -1,   -1,
-		  -1,   -1,   -1,   -1,   -1,   -1,   -1,   -1,
-		  -1,   -1,   -1,   -1,   -1,   -1,   -1,   -1,
-		  -1,   -1,   -1,   -1,   -1,   -1,   -1,   -1,
-		  -1,   -1,   -1,   -1,   -1,   -1,   -1,   -1,
-		5828, 6016, 6204, 6392, 6580, 6768, 6956, 7144,
-		7332, 7520,   -1,   -1,   -1,   -1,   -1,   -1,
-		  -1,   -1,   -1,   -1,   -1,   -1,   -1,   -1,
-		  -1,   -1,   -1,   -1,   -1,   -1,   -1,   -1
+		        -1,  0*KU_SIZE,  2*KU_SIZE,  4*KU_SIZE,  6*KU_SIZE,  8*KU_SIZE, 10*KU_SIZE, 12*KU_SIZE,
+		14*KU_SIZE, 16*KU_SIZE, 18*KU_SIZE, 20*KU_SIZE, 22*KU_SIZE, 24*KU_SIZE, 26*KU_SIZE, 28*KU_SIZE,
+		30*KU_SIZE, 32*KU_SIZE, 34*KU_SIZE, 36*KU_SIZE, 38*KU_SIZE, 40*KU_SIZE, 42*KU_SIZE, 44*KU_SIZE,
+		46*KU_SIZE, 48*KU_SIZE, 50*KU_SIZE, 52*KU_SIZE, 54*KU_SIZE, 56*KU_SIZE, 58*KU_SIZE, 60*KU_SIZE,
+		-1, -1, -1, -1, -1, -1, -1, -1,
+		-1, -1, -1, -1, -1, -1, -1, -1,
+		-1, -1, -1, -1, -1, -1, -1, -1,
+		-1, -1, -1, -1, -1, -1, -1, -1,
+		-1, -1, -1, -1, -1, -1, -1, -1,
+		-1, -1, -1, -1, -1, -1, -1, -1,
+		-1, -1, -1, -1, -1, -1, -1, -1,
+		-1, -1, -1, -1, -1, -1, -1, -1,
+		62*KU_SIZE, 64*KU_SIZE, 66*KU_SIZE, 68*KU_SIZE, 70*KU_SIZE, 72*KU_SIZE, 74*KU_SIZE, 76*KU_SIZE,
+		78*KU_SIZE, 80*KU_SIZE, 82*KU_SIZE, 84*KU_SIZE, 86*KU_SIZE, 88*KU_SIZE, 90*KU_SIZE, 92*KU_SIZE,
+		(94+ 0)*KU_SIZE, (94+ 2)*KU_SIZE, (94+ 4)*KU_SIZE, (94+12)*KU_SIZE, (94+14)*KU_SIZE, (94+78)*KU_SIZE, (94+80)*KU_SIZE, (94+82)*KU_SIZE,
+		(94+84)*KU_SIZE, (94+86)*KU_SIZE, (94+88)*KU_SIZE, (94+90)*KU_SIZE, (94+92)*KU_SIZE, -1, -1, -1
 	};
 
 	unsigned char b1, b2;
@@ -225,7 +226,13 @@ static unsigned int Encoding::decode_shiftjis(
 			// correct sequence
 			if (offset[b1 - 0x80] != -1 && b2 != 0x7f && 0x40 <= b2 && b2 <= 0xfc) {
 				codepoint = offset[b1 - 0x80] + (b2 < 0x80 ? b2 : b2 - 1) - 0x40;
-				dest[len] = jisx0208_2_unicode[codepoint];
+				// jis x 0213 shifting
+				if (b1 >= 0xf0) {
+					if (b1 == 0xf0 && b2 >= 0x80) codepoint += 6*KU_SIZE;
+					else if (b1 == 0xf2 && b2 >= 0x80) codepoint += 6*KU_SIZE;
+					else if (b1 == 0xf4 && b2 >= 0x80) codepoint += 62*KU_SIZE;
+				}
+				dest[len] = jisx0213_2_unicode[codepoint];
 			}
 			// bad sequence
 			else
@@ -239,7 +246,7 @@ static unsigned int Encoding::decode_shiftjis(
 }
 
 static unsigned int Encoding::decode_eucjp(
-		wchar_t *dest,
+		int *dest,
 		unsigned int dest_size,
 		const unsigned char *src,
 		unsigned int src_size)
@@ -257,7 +264,7 @@ static unsigned int Encoding::decode_eucjp(
 					break;
 				b2 = src[i];
 				// single shift
-				// JIS X 0208
+				// JIS X 0213
 				if (b1 == 0x8e || (0xa1 <= b1 && b1 <= 0xf4 && 0xa1 <= b2 && b2 <= 0xfe))
 					continue;
 				// bad sequence
@@ -272,7 +279,7 @@ static unsigned int Encoding::decode_eucjp(
 		b1 = src[i];
 		// 1 byte sequence
 		if (b1 <= 0x7f)
-			dest[len] = (wchar_t)b1;
+			dest[len] = (int)b1;
 		// 2 bytes sequence
 		else /* b1 >= 0x80 */ {
 			if (++i >= src_size)
@@ -283,7 +290,7 @@ static unsigned int Encoding::decode_eucjp(
 				dest[len] = jisx0201_2_unicode[b2];
 			// JIS X 0208
 			else if (0xa1 <= b1 && b1 <= 0xf4 && 0xa1 <= b2 && b2 <= 0xfe)
-				dest[len] = jisx0208_2_unicode[(b1 - 0xa1) * 94 + (b2 - 0xa1)];
+				dest[len] = jisx0213_2_unicode[(b1 - 0xa1) * 94 + (b2 - 0xa1)];
 			// bad sequence
 			else {
 				dest[len] = UNICODE_BAD_SEQUENCE;

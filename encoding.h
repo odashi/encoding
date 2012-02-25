@@ -3,8 +3,6 @@
 #ifndef INCLUDED_ENCODING_H_
 #define INCLUDED_ENCODING_H_
 
-#include <wchar.h>
-
 namespace Encoding {
 
 	/** Encoding type
@@ -41,7 +39,7 @@ namespace Encoding {
 	 * If dest is NULL, this function only counts the necessary size of dest.
 	 */
 	unsigned int decode_utf16(
-		wchar_t *dest,
+		int *dest,
 		unsigned int dest_size,
 		const unsigned char *src,
 		unsigned int src_size
@@ -59,7 +57,7 @@ namespace Encoding {
 	 * If dest is NULL, this function only counts the necessary size of dest.
 	 */
 	unsigned int decode_utf8(
-		wchar_t *dest,
+		int *dest,
 		unsigned int dest_size,
 		const unsigned char *src,
 		unsigned int src_size
@@ -77,7 +75,7 @@ namespace Encoding {
 	 * If dest is NULL, this function only counts the necessary size of dest.
 	 */
 	unsigned int decode_shiftjis(
-		wchar_t *dest,
+		int *dest,
 		unsigned int dest_size,
 		const unsigned char *src,
 		unsigned int src_size
@@ -95,7 +93,7 @@ namespace Encoding {
 	 * If dest is NULL, this function only counts the necessary size of dest.
 	 */
 	unsigned int decode_eucjp(
-		wchar_t *dest,
+		int *dest,
 		unsigned int dest_size,
 		const unsigned char *src,
 		unsigned int src_size
@@ -114,7 +112,7 @@ namespace Encoding {
 	 * If dest is NULL, this function only counts the necessary size of dest.
 	 */
 	unsigned int decode(
-			wchar_t *dest,
+			int *dest,
 			unsigned int dest_size,
 			const unsigned char *src,
 			unsigned int src_size,
