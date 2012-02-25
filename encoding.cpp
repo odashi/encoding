@@ -362,7 +362,7 @@ enum Encoding::ENCODING_TYPE Encoding::getEncoding(
 		if (b1 <= 0x7f || (0xa1 <= b1 && b1 <= 0xdf))
 			sjis++;
 		// 2 byte sequence
-		else if (((0x81 <= b1 && b1 <= 0x9f) || (0xe0 <= b1 && b1 <= 0xe9)) && i < src_size - 1) {
+		else if (((0x81 <= b1 && b1 <= 0x9f) || (0xe0 <= b1 && b1 <= 0xfc)) && i < src_size - 1) {
 			b2 = src[i + 1];
 			if (b2 != 0x7f && 0x40 <= b2 && b2 <= 0xfc)
 				sjis += 2, i++;
