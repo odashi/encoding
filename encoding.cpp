@@ -2,12 +2,7 @@
 #include "encoding.h"
 #include "jis2unicode.h"
 
-unsigned int Encoding::decode(
-		int *dest,
-		unsigned int dest_size,
-		const unsigned char *src,
-		unsigned int src_size,
-		enum ENCODING_TYPE encoding)
+unsigned int Encoding::decode(int *dest, unsigned int dest_size, const unsigned char *src, unsigned int src_size, EncodingType encoding)
 {
 	// dispatching
 	switch (encoding) {
@@ -21,18 +16,13 @@ unsigned int Encoding::decode(
 	return 0;
 }
 
-unsigned int Encoding::decode_utf16(
-		int *dest,
-		unsigned int dest_size,
-		const unsigned char *src,
-		unsigned int src_size)
+unsigned int Encoding::decode_utf16(int *dest, unsigned int dest_size, const unsigned char *src, unsigned int src_size)
 {
 	int high = 1, low = 0; // for endian
 	unsigned char b1, b2;
 	unsigned int len = 0;
 
-	if (src_size < 2)
-		return 0;
+	if (src_size < 2) return 0;
 
 	// recognize BOM
 	b1 = src[0], b2 = src[1];
@@ -50,8 +40,7 @@ unsigned int Encoding::decode_utf16(
 		for (unsigned int i = 0; i < src_size - 1; i += 2, len++) {
 			b1 = src[i + high], b2 = src[i + low];
 			// end of text
-			if (b1 == 0x00 && b2 == 0x00)
-				break;
+			if (b1 == 0x00 && b2 == 0x00) break;
 		}
 		return len;
 	}
@@ -60,18 +49,13 @@ unsigned int Encoding::decode_utf16(
 	for (unsigned int i = 0; i < src_size - 1 && len < dest_size; i += 2, len++) {
 		b1 = src[i + high], b2 = src[i + low];
 		// end of text
-		if (b1 == 0x00 && b2 == 0x00)
-			break;
+		if (b1 == 0x00 && b2 == 0x00) break;
 		dest[len] = ((int)b1 << 8) | (int)b2;
 	}
 	return len;
 }
 
-unsigned int Encoding::decode_utf8(
-		int *dest,
-		unsigned int dest_size,
-		const unsigned char *src,
-		unsigned int src_size)
+unsigned int Encoding::decode_utf8(int *dest, unsigned int dest_size, const unsigned char *src, unsigned int src_size)
 {
 	unsigned char b1, b2, b3, b4;
 	unsigned int len = 0;
@@ -86,43 +70,35 @@ unsigned int Encoding::decode_utf8(
 		for (unsigned int i = 0; i < src_size; i++, len++) {
 			b1 = src[i];
 			// end of text
-			if (b1 == 0x00)
-				break;
+			if (b1 == 0x00) break;
 			// 1 byte sequence (ASCII compatible)
 			// 5~6 bytes sequence (error)
 			// other errors
-			if (b1 <= 0xc1 || 0xf8 <= b1)
-				continue;
+			if (b1 <= 0xc1 || 0xf8 <= b1) continue;
 			// 2 bytes sequence
 			if (b1 <= 0xdf) {
-				if (++i >= src_size)
-					break;
+				if (++i >= src_size) break;
 				b2 = src[i];
 				// correct sequence
-				if (0x80 <= b2 && b2 <= 0xbf)
-					continue;
+				if (0x80 <= b2 && b2 <= 0xbf) continue;
 				// bad sequence
 				i--;
 			}
 			// 3 bytes sequence
 			else if (b1 <= 0xef) {
-				if ((i += 2) >= src_size)
-					break;
+				if ((i += 2) >= src_size) break;
 				b2 = src[i - 1], b3 = src[i];
 				// correct sequence
-				if (0x80 <= b2 && b2 <= 0xbf && 0x80 <= b3 && b3 <= 0xbf)
-					continue;
+				if (0x80 <= b2 && b2 <= 0xbf && 0x80 <= b3 && b3 <= 0xbf) continue;
 				// bad sequence
 				i -= 2;
 			}
 			// 4 bytes sequence
 			else /* if (b1 <= 0xf7) */ {
-				if ((i += 3) >= src_size)
-					break;
+				if ((i += 3) >= src_size) break;
 				b2 = src[i - 2], b3 = src[i - 1], b4 = src[i];
 				// correct sequence
-				if (0x80 <= b2 && b2 <= 0xbf && 0x80 <= b3 && b3 <= 0xbf && 0x80 <= b4 && b4 <= 0xbf)
-					continue;
+				if (0x80 <= b2 && b2 <= 0xbf && 0x80 <= b3 && b3 <= 0xbf && 0x80 <= b4 && b4 <= 0xbf) continue;
 				// bad sequence
 				i -= 3;
 			}
@@ -134,73 +110,63 @@ unsigned int Encoding::decode_utf8(
 	for (unsigned int i = 0; i < src_size && len < dest_size; i++, len++) {
 		b1 = src[i];
 		// end of text
-		if (b1 == 0x00)
-			break;
+		if (b1 == 0x00) break;
 		// 1 byte sequence (ASCII compatible)
-		if (b1 <= 0x7f)
-			dest[len] = (int)b1;
+		if (b1 <= 0x7f) dest[len] = (int)b1;
 		// 5~6 bytes sequence (error)
 		// other errors
-		else if (b1 <= 0xc1 || 0xf8 <= b1)
-			dest[len] = UNICODE_BAD_SEQUENCE;
+		else if (b1 <= 0xc1 || 0xf8 <= b1) dest[len] = UNICODE_BAD_SEQUENCE;
 		// 2 bytes sequence
 		else if (b1 <= 0xdf) {
-			if (++i >= src_size)
-				break;
+			if (++i >= src_size) break;
 			b2 = src[i];
 			// correct sequence
-			if (0x80 <= b2 && b2 <= 0xbf)
+			if (0x80 <= b2 && b2 <= 0xbf) {
 				dest[len] =
-						(((int)b1 & 0x1f) << 6) |
-						((int)b2 & 0x3f);
+					(((int)b1 & 0x1f) << 6) |
+					((int)b2 & 0x3f);
+			}
 			// bad sequence
-			else
-				i--;
+			else i--;
 		}
 		// 3 bytes sequence
 		else if (b1 <= 0xef) {
-			if ((i += 2) >= src_size)
-				break;
+			if ((i += 2) >= src_size) break;
 			b2 = src[i - 1], b3 = src[i];
 			// correct sequence
-			if (0x80 <= b2 && b2 <= 0xbf && 0x80 <= b3 && b3 <= 0xbf)
+			if (0x80 <= b2 && b2 <= 0xbf && 0x80 <= b3 && b3 <= 0xbf) {
 				dest[len] =
-						(((int)b1 & 0x0f) << 12) |
-						(((int)b2 & 0x3f) << 6) |
-						((int)b3 & 0x3f);
+					(((int)b1 & 0x0f) << 12) |
+					(((int)b2 & 0x3f) << 6) |
+					((int)b3 & 0x3f);
+			}
 			// bad sequence
-			else
-				i -= 2;
+			else i -= 2;
 		}
 		// 4 bytes sequence
 		else /* if (b1 <= 0xf7) */ {
-			if ((i += 3) >= src_size)
-				break;
+			if ((i += 3) >= src_size) break;
 			b2 = src[i - 2], b3 = src[i - 1], b4 = src[i];
 			// correct sequence
-			if (0x80 <= b2 && b2 <= 0xbf && 0x80 <= b3 && b3 <= 0xbf && 0x80 <= b4 && b4 <= 0xbf)
+			if (0x80 <= b2 && b2 <= 0xbf && 0x80 <= b3 && b3 <= 0xbf && 0x80 <= b4 && b4 <= 0xbf) {
 				dest[len] =
-						(((int)b1 & 0x07) << 18) |
-						(((int)b2 & 0x3f) << 12) |
-						(((int)b3 & 0x3f) << 6) |
-						((int)b4 & 0x3f);
+					(((int)b1 & 0x07) << 18) |
+					(((int)b2 & 0x3f) << 12) |
+					(((int)b3 & 0x3f) << 6) |
+					((int)b4 & 0x3f);
+			}
 			// bad sequence
-			else
-				i -= 3;
+			else i -= 3;
 		}
 	}
 	return len;
 }
 
-unsigned int Encoding::decode_shiftjis(
-		int *dest,
-		unsigned int dest_size,
-		const unsigned char *src,
-		unsigned int src_size)
+unsigned int Encoding::decode_shiftjis(int *dest, unsigned int dest_size, const unsigned char *src, unsigned int src_size)
 {
 	const int KU_SIZE = 94;
 	const int offset[] = {
-		        -1,  0*KU_SIZE,  2*KU_SIZE,  4*KU_SIZE,  6*KU_SIZE,  8*KU_SIZE, 10*KU_SIZE, 12*KU_SIZE,
+		-1,  0*KU_SIZE,  2*KU_SIZE,  4*KU_SIZE,  6*KU_SIZE,  8*KU_SIZE, 10*KU_SIZE, 12*KU_SIZE,
 		14*KU_SIZE, 16*KU_SIZE, 18*KU_SIZE, 20*KU_SIZE, 22*KU_SIZE, 24*KU_SIZE, 26*KU_SIZE, 28*KU_SIZE,
 		30*KU_SIZE, 32*KU_SIZE, 34*KU_SIZE, 36*KU_SIZE, 38*KU_SIZE, 40*KU_SIZE, 42*KU_SIZE, 44*KU_SIZE,
 		46*KU_SIZE, 48*KU_SIZE, 50*KU_SIZE, 52*KU_SIZE, 54*KU_SIZE, 56*KU_SIZE, 58*KU_SIZE, 60*KU_SIZE,
@@ -227,16 +193,13 @@ unsigned int Encoding::decode_shiftjis(
 		for (unsigned int i = 0; i < src_size; i++, len++) {
 			b1  = src[i];
 			// end of text
-			if (b1 == 0x00)
-				break;
+			if (b1 == 0x00) break;
 			// 2 bytes sequence
 			if (jisx0201_2_unicode[b1] == UNICODE_BAD_SEQUENCE) {
-				if (++i >= src_size)
-					break;
+				if (++i >= src_size) break;
 				b2 = src[i];
 				// correct sequence
-				if (offset[b1 - 0x80] != -1 && b2 != 0x7f && 0x40 <= b2 && b2 <= 0xfc)
-					continue;
+				if (offset[b1 - 0x80] != -1 && b2 != 0x7f && 0x40 <= b2 && b2 <= 0xfc) continue;
 				// bad sequence
 				i--;
 			}
@@ -248,15 +211,13 @@ unsigned int Encoding::decode_shiftjis(
 	for (unsigned int i = 0; i < src_size && len < dest_size; i++, len++) {
 		b1  = src[i];
 		// end of text
-		if (b1 == 0x00)
-			break;
+		if (b1 == 0x00) break;
 		// 1 byte sequence (ASCII & JIS X 0201)
 		if (jisx0201_2_unicode[b1] != UNICODE_BAD_SEQUENCE)
 			dest[len] = jisx0201_2_unicode[b1];
 		// 2 bytes sequence (JIS X 0208)
 		else {
-			if (++i >= src_size)
-				break;
+			if (++i >= src_size) break;
 			b2 = src[i];
 			// correct sequence
 			if (offset[b1 - 0x80] != -1 && b2 != 0x7f && 0x40 <= b2 && b2 <= 0xfc) {
@@ -270,8 +231,7 @@ unsigned int Encoding::decode_shiftjis(
 				dest[len] = jisx0213_2_unicode[codepoint];
 			}
 			// bad sequence
-			else
-			{
+			else {
 				dest[len] = UNICODE_BAD_SEQUENCE;
 				i--;
 			}
@@ -280,11 +240,7 @@ unsigned int Encoding::decode_shiftjis(
 	return len;
 }
 
-unsigned int Encoding::decode_eucjp(
-		int *dest,
-		unsigned int dest_size,
-		const unsigned char *src,
-		unsigned int src_size)
+unsigned int Encoding::decode_eucjp(int *dest, unsigned int dest_size, const unsigned char *src, unsigned int src_size)
 {
 	unsigned char b1, b2, b3;
 	unsigned int len = 0;
@@ -294,25 +250,20 @@ unsigned int Encoding::decode_eucjp(
 		for (unsigned int i = 0; i < src_size; i++, len++) {
 			b1 = src[i];
 			// end of text
-			if (b1 == 0x00)
-				break;
+			if (b1 == 0x00) break;
 			// 3 bytes sequence (JIS X 0213 plane 2)
 			if (b1 == 0x8f) {
-				if ((i += 2) >= src_size)
-					break;
+				if ((i += 2) >= src_size) break;
 				b2 = src[i - 1], b3 = src[i];
-				if (0xa1 <= b2 && b2 <= 0xfe && 0xa1 <= b3 && b3 <= 0xfe)
-					continue;
+				if (0xa1 <= b2 && b2 <= 0xfe && 0xa1 <= b3 && b3 <= 0xfe) continue;
 				// bad sequence
 				i -= 2;
 			}
 			// 2 bytes sequence (JIS X 0201 kana/JIS X 0213 plane 1)
 			else if (b1 >= 0x80) {
-				if (++i >= src_size)
-					break;
+				if (++i >= src_size) break;
 				b2 = src[i];
-				if (b1 == 0x8e || (0xa1 <= b1 && b1 <= 0xfe && 0xa1 <= b2 && b2 <= 0xfe))
-					continue;
+				if (b1 == 0x8e || (0xa1 <= b1 && b1 <= 0xfe && 0xa1 <= b2 && b2 <= 0xfe)) continue;
 				// bad sequence
 				i--;
 			}
@@ -324,15 +275,12 @@ unsigned int Encoding::decode_eucjp(
 	for (unsigned int i = 0; i < src_size && len < dest_size; i++, len++) {
 		b1 = src[i];
 		// end of text
-		if (b1 == 0x00)
-			break;
+		if (b1 == 0x00) break;
 		// 1 byte sequence
-		if (b1 <= 0x7f)
-			dest[len] = (int)b1;
+		if (b1 <= 0x7f) dest[len] = (int)b1;
 		// 3 bytes sequence (JIS X 0213 plane 2)
 		else if (b1 == 0x8f) {
-			if ((i += 2) >= src_size)
-				break;
+			if ((i += 2) >= src_size) break;
 			b2 = src[i - 1], b3 = src[i];
 			if (0xa1 <= b2 && b2 <= 0xfe && 0xa1 <= b3 && b3 <= 0xfe)
 				dest[len] = jisx0213_2_unicode[(b2 - 0xa1 + 94) * 94 + (b3 - 0xa1)];
@@ -344,12 +292,10 @@ unsigned int Encoding::decode_eucjp(
 		}
 		// 2 bytes sequence
 		else /* b1 >= 0x80 */ {
-			if (++i >= src_size)
-				break;
+			if (++i >= src_size) break;
 			b2 = src[i];
 			// JIS X 0201 kana
-			if (b1 == 0x8e)
-				dest[len] = jisx0201_2_unicode[b2];
+			if (b1 == 0x8e) dest[len] = jisx0201_2_unicode[b2];
 			// JIS X 0213 plane 1
 			else if (0xa1 <= b1 && b1 <= 0xfe && 0xa1 <= b2 && b2 <= 0xfe)
 				dest[len] = jisx0213_2_unicode[(b1 - 0xa1) * 94 + (b2 - 0xa1)];
@@ -363,9 +309,7 @@ unsigned int Encoding::decode_eucjp(
 	return len;
 }
 
-Encoding::EncodingType Encoding::getEncoding(
-		const unsigned char *src,
-		unsigned int src_size)
+Encoding::EncodingType Encoding::getEncoding(const unsigned char *src, unsigned int src_size)
 {
 	/* Basic idea:
 	 *   UTF-16
@@ -393,33 +337,28 @@ Encoding::EncodingType Encoding::getEncoding(
 	// find UTF-16 encoded ASCII
 	for (unsigned int i = 0; i < src_size - 1; i += 2) {
 		b1 = src[i + utf16_high], b2 = src[i + utf16_low];
-		if (b1 == 0x00 && b2 != 0x00 && b2 != 0x7f)
-				return UTF16;
+		if (b1 == 0x00 && b2 != 0x00 && b2 != 0x7f) return UTF16;
 	}
 
 	// calculate UTF-8 similarity
 	for (unsigned int i = 0; i < src_size; i++) {
 		b1 = src[i];
 		// 1 byte sequence
-		if (b1 <= 0x7f)
-			utf8++;
+		if (b1 <= 0x7f) utf8++;
 		// 2 bytes sequence
 		else if (0xc2 <= b1 && b1 <= 0xdf && i < src_size - 1) {
 			b2 = src[i + 1];
-			if (0x80 <= b2 && b2 <= 0xbf)
-				utf8 += 2, i++;
+			if (0x80 <= b2 && b2 <= 0xbf) utf8 += 2, i++;
 		}
 		// 3 bytes sequence
 		else if (0xe0 <= b1 && b1 <= 0xef && i < src_size - 2) {
 			b2 = src[i + 1], b3 = src[i + 2];
-			if (0x80 <= b2 && b2 <= 0xbf && 0x80 <= b3 && b3 <= 0xbf)
-				utf8 += 3, i += 2;
+			if (0x80 <= b2 && b2 <= 0xbf && 0x80 <= b3 && b3 <= 0xbf) utf8 += 3, i += 2;
 		}
 		// 4 bytes sequence
 		else if (0xf0 <= b1 && b1 <= 0xf7 && i < src_size - 3) {
 			b2 = src[i + 1], b3 = src[i + 2], b4 = src[i + 3];
-			if (0x80 <= b2 && b2 <= 0xbf && 0x80 <= b3 && b3 <= 0xbf && 0x80 <= b4 && b4 <= 0xbf)
-				utf8 += 4, i += 3;
+			if (0x80 <= b2 && b2 <= 0xbf && 0x80 <= b3 && b3 <= 0xbf && 0x80 <= b4 && b4 <= 0xbf) utf8 += 4, i += 3;
 		}
 	}
 
@@ -427,13 +366,11 @@ Encoding::EncodingType Encoding::getEncoding(
 	for (unsigned int i = 0; i < src_size; i++) {
 		b1 = src[i];
 		// 1 byte sequence
-		if (b1 <= 0x7f || (0xa1 <= b1 && b1 <= 0xdf))
-			sjis++;
+		if (b1 <= 0x7f || (0xa1 <= b1 && b1 <= 0xdf)) sjis++;
 		// 2 bytes sequence
 		else if (((0x81 <= b1 && b1 <= 0x9f) || (0xe0 <= b1 && b1 <= 0xfc)) && i < src_size - 1) {
 			b2 = src[i + 1];
-			if (b2 != 0x7f && 0x40 <= b2 && b2 <= 0xfc)
-				sjis += 2, i++;
+			if (b2 != 0x7f && 0x40 <= b2 && b2 <= 0xfc) sjis += 2, i++;
 		}
 	}
 
@@ -441,27 +378,21 @@ Encoding::EncodingType Encoding::getEncoding(
 	for (unsigned int i = 0; i < src_size; i++) {
 		b1 = src[i];
 		// 1 byte sequence
-		if (b1 <= 0x7f)
-			eucjp++;
+		if (b1 <= 0x7f) eucjp++;
 		// 3 bytes sequence (JIS X 0213 plane 2)
 		else if (b1 == 0x8f && i < src_size - 2) {
 			b2 = src[i + 1], b3 = src[i + 2];
-			if (0xa1 <= b2 && b2 <= 0xfe && 0xa1 <= b3 && b3 <= 0xfe)
-				eucjp += 3, i += 2;
+			if (0xa1 <= b2 && b2 <= 0xfe && 0xa1 <= b3 && b3 <= 0xfe) eucjp += 3, i += 2;
 		}
 		// 2 bytes sequence
 		else if (i < src_size - 1) {
 			b2 = src[i + 1];
 			// JIS X 0201 kana/JIS X 0213 plane 1
-			if (b1 == 0x8e || (0xa1 <= b1 && b1 <= 0xfe && 0xa1 <= b2 && b2 <= 0xfe))
-				eucjp += 2, i++;
+			if (b1 == 0x8e || (0xa1 <= b1 && b1 <= 0xfe && 0xa1 <= b2 && b2 <= 0xfe)) eucjp += 2, i++;
 		}
 	}
 
-	if (utf8 >= sjis && utf8 >= eucjp)
-		return UTF8;
-	if (sjis >= eucjp)
-		return SHIFTJIS;
-
+	if (utf8 >= sjis && utf8 >= eucjp) return UTF8;
+	if (sjis >= eucjp) return SHIFTJIS;
 	return EUCJP;
 }
