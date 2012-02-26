@@ -5,8 +5,7 @@
 
 namespace Encoding {
 
-	/** Encoding type
-	 */
+	/// Encoding type
 	enum EncodingType {
 		/// Unknown encoding
 		NONE = 0,
@@ -14,110 +13,45 @@ namespace Encoding {
 		UTF16,
 		/// UTF-8 encoding
 		UTF8,
-		/// Shift JIS/CP932 encoding
+		/// Shift_JIS/CP932 encoding
 		SHIFTJIS,
 		/// EUC-JP encoding
 		EUCJP
 	};
 
-	/** Unicode registered symbols
-	 */
+	/// Unicode registered symbols
 	enum UnicodeSymbol {
 		/// Unrecognized character (Geta character)
 		UNICODE_BAD_SEQUENCE = 0xfffd
 	};
 
-	/** Transform UTF-16 BE/LE byte stream into UTF-16 characters.
+	/** Transform a specified encoding into Unicode codepoint.
 	 *
-	 * @param dest Destination pointer for UTF-16 encoded text or NULL.
-	 * @param dest_size Maximum length of dest (without L'\0').
-	 * @param src Source text encoded UTF-16 LE/BE.
-	 * @param src_size Maximum length of src (without L'\0').
-	 * 
-	 * @retval The length of the text which is actually encoded.
-	 * (with invalid code (0xfffd), without L'\0')
-	 * If dest is NULL, this function only counts the necessary size of dest.
-	 */
-	unsigned int decode_utf16(
-		int *dest,
-		unsigned int dest_size,
-		const unsigned char *src,
-		unsigned int src_size
-	);
-
-	/** Transform UTF-8 byte stream into UTF-16 characters.
-	 *
-	 * @param dest Destination pointer for UTF-16 encoded text or NULL.
-	 * @param dest_size Maximum length of dest (without L'\0').
-	 * @param src Source text encoded UTF-8.
-	 * @param src_size Maximum length of src (without L'\0').
-	 * 
-	 * @retval The length of the text which is actually encoded.
-	 * (with invalid code (0xfffd), without L'\0')
-	 * If dest is NULL, this function only counts the necessary size of dest.
-	 */
-	unsigned int decode_utf8(
-		int *dest,
-		unsigned int dest_size,
-		const unsigned char *src,
-		unsigned int src_size
-	);
-
-	/** Transform Shift JIS/CP932 byte stream into UTF-16 characters.
-	 *
-	 * @param dest Destination pointer for UTF-16 encoded text or NULL.
-	 * @param dest_size Maximum length of dest (without L'\0').
-	 * @param src Source text encoded Shift JIS.
-	 * @param src_size Maximum length of src (without L'\0').
-	 * 
-	 * @retval The length of the text which is actually encoded.
-	 * (with invalid code (0xfffd), without L'\0')
-	 * If dest is NULL, this function only counts the necessary size of dest.
-	 */
-	unsigned int decode_shiftjis(
-		int *dest,
-		unsigned int dest_size,
-		const unsigned char *src,
-		unsigned int src_size
-	);
-
-	/** Transform EUC-JP byte stream into UTF-16 characters.
-	 *
-	 * @param dest Destination pointer for UTF-16 encoded text or NULL.
-	 * @param dest_size Maximum length of dest (without L'\0').
-	 * @param src Source text encoded EUC-JP.
-	 * @param src_size Maximum length of src (without L'\0').
-	 * 
-	 * @retval The length of the text which is actually encoded.
-	 * (with invalid code (0xfffd), without L'\0')
-	 * If dest is NULL, this function only counts the necessary size of dest.
-	 */
-	unsigned int decode_eucjp(
-		int *dest,
-		unsigned int dest_size,
-		const unsigned char *src,
-		unsigned int src_size
-	);
-
-	/** Transform a specified encoding into UTF-16.
-	 *
-	 * @param dest Destination pointer for UTF-16 encoded text or NULL.
+	 * @param dest Destination pointer for Unicode codepoint sequence or nullptr.
 	 * @param dest_size Maximum length of dest (without L'\0').
 	 * @param src Source text.
 	 * @param src_size Maximum length of src (without L'\0').
 	 * @param encoding Encoding of src.
 	 * 
-	 * @retval The length of the text which is actually encoded.
+	 * @retval The length of the text which is actually decoded.
 	 * (with invalid code (0xfffd), without L'\0')
-	 * If dest is NULL, this function only counts the necessary size of dest.
+	 * If dest is nullptr, this function only counts the necessary size of dest.
 	 */
-	unsigned int decode(
-			int *dest,
-			unsigned int dest_size,
-			const unsigned char *src,
-			unsigned int src_size,
-			EncodingType encoding
-	);
+	unsigned int decode(int *dest, unsigned int dest_size, const unsigned char *src, unsigned int src_size, EncodingType encoding);
+
+	/** Transform a specified encoding into Unicode codepoint.
+	 *
+	 * @param dest Destination pointer for encoded text or nullptr.
+	 * @param dest_size Maximum length of dest (without L'\0').
+	 * @param src Unicode codepoint sequence.
+	 * @param src_size Maximum length of src (without L'\0').
+	 * @param encoding Encoding of dest.
+	 * 
+	 * @retval The length of the text which is actually encoded.
+	 * (without L'\0')
+	 * If dest is nullptr, this function only counts the necessary size of dest.
+	 */
+	unsigned int encode(unsigned char *dest, unsigned int dest_size, const int *src, unsigned int src_size, EncodingType encoding);
 
 	/** Guess the encoding type of text data.
 	 *
@@ -126,10 +60,7 @@ namespace Encoding {
 	 * 
 	 * @retval An EncodingType value which is guessed from src.
 	 */
-	 EncodingType getEncoding(
-			const unsigned char *src,
-			unsigned int src_size
-	);
+	 EncodingType getEncoding(const unsigned char *src, unsigned int src_size);
 
 } // namespace Encoding
 
