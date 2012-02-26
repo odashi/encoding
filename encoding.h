@@ -116,7 +116,7 @@ namespace Encoding {
 			unsigned int dest_size,
 			const unsigned char *src,
 			unsigned int src_size,
-			enum ENCODING_TYPE encoding
+			EncodingType encoding
 	);
 
 	/** Guess the encoding type of text data.
