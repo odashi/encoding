@@ -25,5 +25,8 @@
     <ClCompile Include="encoding.cpp">
       <Filter>Sources</Filter>
     </ClCompile>
+    <ClCompile Include="judgement.cpp">
+      <Filter>Sources</Filter>
+    </ClCompile>
   </ItemGroup>
 </Project>

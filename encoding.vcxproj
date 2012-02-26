@@ -66,6 +66,7 @@
   <ItemGroup>
     <ClCompile Include="encoding.cpp" />
     <ClCompile Include="jis2unicode.cpp" />
+    <ClCompile Include="judgement.cpp" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
