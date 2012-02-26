@@ -20,6 +20,7 @@ unsigned int Encoding::decode_utf16(int *dest, unsigned int dest_size, const uns
 {
 	int high = 1, low = 0; // for endian
 	unsigned char b1, b2;
+	int code1, code2;
 	unsigned int len = 0;
 
 	if (src_size < 2) return 0;
@@ -37,20 +38,34 @@ unsigned int Encoding::decode_utf16(int *dest, unsigned int dest_size, const uns
 
 	if (!dest) {
 		// counting
-		for (unsigned int i = 0; i < src_size - 1; i += 2, len++) {
-			b1 = src[i + high], b2 = src[i + low];
+		for (unsigned int i = 0; i < src_size - 1; i += 2, ++len) {
+			code1 = ((int)src[i + high] << 8) | (int)src[i + low];
 			// end of text
-			if (b1 == 0x00 && b2 == 0x00) break;
+			if (code1 == 0x0000) break;
+			// surrogate pair
+			if ((code1 & 0xfc00) == 0xd800 && i < src_size - 3) {
+				code2 = ((int)src[i + 2 + high] << 8) | (int)src[i + 2 + low];
+				if ((code2 & 0xfc00) == 0xdc00) i += 2;
+			}
 		}
 		return len;
 	}
 
 	// decoding
-	for (unsigned int i = 0; i < src_size - 1 && len < dest_size; i += 2, len++) {
-		b1 = src[i + high], b2 = src[i + low];
+	for (unsigned int i = 0; i < src_size - 1 && len < dest_size; i += 2, ++len) {
+		code1 = ((int)src[i + high] << 8) | (int)src[i + low];
 		// end of text
-		if (b1 == 0x00 && b2 == 0x00) break;
-		dest[len] = ((int)b1 << 8) | (int)b2;
+		if (code1 == 0x0000) break;
+		// surrogate pair
+		if ((code1 & 0xfc00) == 0xd800 && i < src_size - 3) {
+			code2 = ((int)src[i + 2 + high] << 8) | (int)src[i + 2 + low];
+			if ((code2 & 0xfc00) == 0xdc00) {
+				dest[len] = (((code1 & 0x0003ff) << 10) | (code2 & 0x0003ff)) + 0x010000;
+				i += 2;
+			}
+			else dest[len] = UNICODE_BAD_SEQUENCE;
+		}
+		else dest[len] = code1;
 	}
 	return len;
 }
@@ -67,7 +82,7 @@ unsigned int Encoding::decode_utf8(int *dest, unsigned int dest_size, const unsi
 
 	if (!dest) {
 		// counting
-		for (unsigned int i = 0; i < src_size; i++, len++) {
+		for (unsigned int i = 0; i < src_size; ++i, ++len) {
 			b1 = src[i];
 			// end of text
 			if (b1 == 0x00) break;
@@ -95,7 +110,7 @@ unsigned int Encoding::decode_utf8(int *dest, unsigned int dest_size, const unsi
 	}
 
 	// decoding
-	for (unsigned int i = 0; i < src_size && len < dest_size; i++, len++) {
+	for (unsigned int i = 0; i < src_size && len < dest_size; ++i, ++len) {
 		b1 = src[i];
 		// end of text
 		if (b1 == 0x00) break;
@@ -162,7 +177,7 @@ unsigned int Encoding::decode_shiftjis(int *dest, unsigned int dest_size, const 
 
 	if (!dest) {
 		// counting
-		for (unsigned int i = 0; i < src_size; i++, len++) {
+		for (unsigned int i = 0; i < src_size; ++i, ++len) {
 			b1  = src[i];
 			// end of text
 			if (b1 == 0x00) break;
@@ -173,14 +188,14 @@ unsigned int Encoding::decode_shiftjis(int *dest, unsigned int dest_size, const 
 				// correct sequence
 				if (offset[b1 - 0x80] != -1 && b2 != 0x7f && 0x40 <= b2 && b2 <= 0xfc) continue;
 				// bad sequence
-				i--;
+				--i;
 			}
 		}
 		return len;
 	}
 
 	// decoding
-	for (unsigned int i = 0; i < src_size && len < dest_size; i++, len++) {
+	for (unsigned int i = 0; i < src_size && len < dest_size; ++i, ++len) {
 		b1  = src[i];
 		// end of text
 		if (b1 == 0x00) break;
@@ -205,7 +220,7 @@ unsigned int Encoding::decode_shiftjis(int *dest, unsigned int dest_size, const 
 			// bad sequence
 			else {
 				dest[len] = UNICODE_BAD_SEQUENCE;
-				i--;
+				--i;
 			}
 		}
 	}
@@ -219,7 +234,7 @@ unsigned int Encoding::decode_eucjp(int *dest, unsigned int dest_size, const uns
 
 	if (!dest) {
 		// counting
-		for (unsigned int i = 0; i < src_size; i++, len++) {
+		for (unsigned int i = 0; i < src_size; ++i, ++len) {
 			b1 = src[i];
 			// end of text
 			if (b1 == 0x00) break;
@@ -237,14 +252,14 @@ unsigned int Encoding::decode_eucjp(int *dest, unsigned int dest_size, const uns
 				b2 = src[i];
 				if (b1 == 0x8e || (0xa1 <= b1 && b1 <= 0xfe && 0xa1 <= b2 && b2 <= 0xfe)) continue;
 				// bad sequence
-				i--;
+				--i;
 			}
 		}
 		return len;
 	}
 
 	// decoding
-	for (unsigned int i = 0; i < src_size && len < dest_size; i++, len++) {
+	for (unsigned int i = 0; i < src_size && len < dest_size; ++i, ++len) {
 		b1 = src[i];
 		// end of text
 		if (b1 == 0x00) break;
@@ -274,7 +289,7 @@ unsigned int Encoding::decode_eucjp(int *dest, unsigned int dest_size, const uns
 			// bad sequence
 			else {
 				dest[len] = UNICODE_BAD_SEQUENCE;
-				i--;
+				--i;
 			}
 		}
 	}
@@ -313,11 +328,11 @@ Encoding::EncodingType Encoding::getEncoding(const unsigned char *src, unsigned 
 	}
 
 	// calculate UTF-8 similarity
-	for (unsigned int i = 0; i < src_size; i++) {
+	for (unsigned int i = 0; i < src_size; ++i) {
 		b1 = src[i];
 		// 1 byte sequence
 		if (b1 <= 0x7f) {
-			utf8++;
+			++utf8;
 			continue;
 		}
 		// other errors
@@ -342,22 +357,22 @@ Encoding::EncodingType Encoding::getEncoding(const unsigned char *src, unsigned 
 	}
 
 	// calculate Shift_JIS similarity
-	for (unsigned int i = 0; i < src_size; i++) {
+	for (unsigned int i = 0; i < src_size; ++i) {
 		b1 = src[i];
 		// 1 byte sequence
-		if (b1 <= 0x7f || (0xa1 <= b1 && b1 <= 0xdf)) sjis++;
+		if (b1 <= 0x7f || (0xa1 <= b1 && b1 <= 0xdf)) ++sjis;
 		// 2 bytes sequence
 		else if (((0x81 <= b1 && b1 <= 0x9f) || (0xe0 <= b1 && b1 <= 0xfc)) && i < src_size - 1) {
 			b2 = src[i + 1];
-			if (b2 != 0x7f && 0x40 <= b2 && b2 <= 0xfc) sjis += 2, i++;
+			if (b2 != 0x7f && 0x40 <= b2 && b2 <= 0xfc) sjis += 2, ++i;
 		}
 	}
 
 	// calculate EUC-JP similarity
-	for (unsigned int i = 0; i < src_size; i++) {
+	for (unsigned int i = 0; i < src_size; ++i) {
 		b1 = src[i];
 		// 1 byte sequence
-		if (b1 <= 0x7f) eucjp++;
+		if (b1 <= 0x7f) ++eucjp;
 		// 3 bytes sequence (JIS X 0213 plane 2)
 		else if (b1 == 0x8f && i < src_size - 2) {
 			b2 = src[i + 1], b3 = src[i + 2];
@@ -367,7 +382,7 @@ Encoding::EncodingType Encoding::getEncoding(const unsigned char *src, unsigned 
 		else if (i < src_size - 1) {
 			b2 = src[i + 1];
 			// JIS X 0201 kana/JIS X 0213 plane 1
-			if (b1 == 0x8e || (0xa1 <= b1 && b1 <= 0xfe && 0xa1 <= b2 && b2 <= 0xfe)) eucjp += 2, i++;
+			if (b1 == 0x8e || (0xa1 <= b1 && b1 <= 0xfe && 0xa1 <= b2 && b2 <= 0xfe)) eucjp += 2, ++i;
 		}
 	}
 
