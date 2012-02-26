@@ -298,33 +298,32 @@ unsigned int Encoding::decode_eucjp(int *dest, unsigned int dest_size, const uns
 
 Encoding::EncodingType Encoding::getEncoding(const unsigned char *src, unsigned int src_size)
 {
-	/* Basic idea:
-	 *   UTF-16
-	 *     Find UTF-16 encoded ASCII.
-	 *   UTF-8, Shift_JIS, EUC-JP
+	/* basic idea:
+	 *   UTF-16LE/UTF-16BE/UTF-8 with BOM
+	 *     recognizing BOM.
+	 *   UTF-16LE/UTF-16BE without BOM
+	 *     find UTF-16 encoded ASCII.
+	 *   UTF-8 without BOM, Shift_JIS, EUC-JP
 	 *     Calculate the "similarity value" and choose the largest one.
 	 */
 	int utf8 = 0, sjis = 0, eucjp = 0;
 	unsigned char b1, b2, b3;
-	int utf16_high = 1, utf16_low = 0; // for UTF-16 endian
 
 	// check UTF-16 BOM
 	if (src_size >= 2) {
-		b1 = src[0], b2 = src[1];
-		if (b1 == 0xff && b2 == 0xfe) {
-			// little endian
-			src += 2, src_size -= 2;
-		} else if (b1 == 0xfe && b2 == 0xff) {
-			// big endian
-			src += 2, src_size -= 2;
-			utf16_high = 0, utf16_low = 1;
-		}
+		// UTF-16 LE
+		if (src[0] == 0xff && src[1] == 0xfe) return UTF16;
+		// UTF-16 BE
+		if (src[0] == 0xfe && src[1] == 0xff) return UTF16;
+	}
+	// check UTF-8 BOM
+	if (src_size >= 3) {
+		if (src[0] == 0xef && src[1] == 0xbb && src[2] == 0xbf) return UTF8;
 	}
 
 	// find UTF-16 encoded ASCII
 	for (unsigned int i = 0; i < src_size - 1; i += 2) {
-		b1 = src[i + utf16_high], b2 = src[i + utf16_low];
-		if (b1 == 0x00 && b2 != 0x00 && b2 != 0x7f) return UTF16;
+		if (src[i] == 0x00 || src[i + 1] == 0x00) return UTF16;
 	}
 
 	// calculate UTF-8 similarity
